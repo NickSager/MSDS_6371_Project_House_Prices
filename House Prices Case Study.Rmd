@@ -15,6 +15,7 @@ library(knitr)
 library(kableExtra)
 library(ggthemes)
 library(caret)
+library(janitor)
 #library(e1071)
 #library(class)
 ```
@@ -244,8 +245,9 @@ ames_dummy <- as.data.frame(predict(dummy_model, newdata = ames))
 
 # Fill in all na values with the mean of the column
 ames_dummy <- ames_dummy %>%
-  mutate_all(~ ifelse(is.na(.), mean(., na.rm = TRUE), .)) %>%
-  select(-one_of("MSZoningC (all)", "RoofMatlTar&Grv"))
+  mutate_all(~ ifelse(is.na(.), mean(., na.rm = TRUE), .))
+ames_dummy <- clean_names(ames_dummy)
+
 
 # Summarize the amount of remaining NA's by column
 colSums(is.na(ames_dummy))
@@ -262,9 +264,13 @@ talk about feature selection methods
 #### Forward Selection
 ```{r}
 # Forward Selection
-# Use the stepAIC() function to perform forward selection
-fit2 <- stepAIC(lm(logSalePrice ~ ., data = train), direction = "forward", trace = FALSE)
-summary(fit2)
+# # Use the stepAIC() function to perform forward selection
+# fit2x <- stepAIC(lm(log_sale_price ~ . - sale_price, data = train),
+#   scope = list(upper = ~. - sale_price, lower = ~ gr_liv_area),
+#   direction = "forward", trace = FALSE
+# )
+# summary(fit2x)
+# defaultSummary(data.frame(pred = predict(fit2x), obs = train$log_sale_price))
 
 # Perform stepwise selection
 set.seed(137)
@@ -273,22 +279,29 @@ ctrl <- trainControl(
   number = 5,
   repeats = 3,
 )
-fit2 <- train(logSalePrice ~ . - SalePrice,
+fit2 <- train(log_sale_price ~ . - sale_price,
   data = train,
   method = "glmStepAIC",
   trControl = ctrl,
   direction = "forward",
-  penter = 0.05
+  penter = 0.05 # Not Working.
 )
 
 summary(fit2)
+defaultSummary(data.frame(pred = predict(fit2), obs = train$log_sale_price))
 
+# Output the predictions for the test set to a csv file
+forward_pred <- predict(fit2, newdata = test)
 
+forward_pred <- data.frame(forward_pred)
+names(forward_pred) <- c("id", "SalePrice")
 
-# Get selected features
-selected <- names(getVarImp(model, scale = FALSE)$importance)
-selected
-
+forward_pred %>%
+  data.frame() %>%
+  rownames_to_column(var = "id") %>%
+  mutate(SalePrice = exp(forward_pred)) %>%
+  dplyr::select(id, SalePrice) %>%
+  write_csv("forward_predictions.csv")
 ```
 
 #### Backward Selection

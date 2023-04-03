@@ -173,8 +173,42 @@ fit1 %>%
 ### Check the Assumptions
 
 #### Residual Plots
+```{r}
+# Plot the studentized residuals using base R
+plot(fit1$fitted.values, fit1$residuals, type = "p") # Fitted values not correct, need logGrLivArea as in ggplot
+plot(fit1$residuals)
+
+# Decide which of these we like better ggplot or R
+
+# Calculate studentized residuals
+stud_res <- rstudent(fit1)
+# Create a data frame with the studentized residuals
+df <- data.frame(stud_res, logGrLivArea = model.frame(fit1)$logGrLivArea)
+
+# Create a scatterplot of the studentized residuals
+ggplot(df, aes(x = logGrLivArea, y = stud_res)) +
+  geom_point() +
+  labs(title = "Scatterplot of Studentized Residuals",
+  x = "Studentized Residuals",
+  y = "Frequency") +
+  theme_minimal()
+
+# Create histogram with normal curve
+ggplot(df, aes(x = stud_res)) +
+  geom_histogram(aes(y = ..density..), binwidth = 0.5, fill = "lightblue", color = "black") +
+  stat_function(fun = dnorm, args = list(mean = mean(df$stud_res), sd = sd(df$stud_res)), color = "blue", size = 1.2) +
+  labs(title = "Histogram of Studentized Residuals with Normal Curve",
+  x = "Studentized Residuals",
+  y = "Frequency") +
+  theme_minimal()
+```
 
 #### Influential Points
+```{r}
+# Plot the residuals vs. the fitted values
+fit1 %>%
+  plot()
+```
 
 ### Comparing competing models
 
@@ -200,7 +234,25 @@ Restate the problem
 In order to use a linear regression model, we need to convert all of the categorical variables into dummy variables. We will also remove or impute the NA's in the data set. Please see the appendix for details on this process.
 ```{r}
 # Data Cleaning
-# Change setup so this isn't shown in the Output.
+# Possible change setup so this isn't shown in the Output.
+
+# Use the dummyVars() function to convert categorical variables into dummy variables
+dummy_model <- dummyVars(~ ., data = ames)
+ames_dummy <- as.data.frame(predict(dummy_model, newdata = ames))
+
+# Handle NA values here
+
+# Fill in all na values with the mean of the column
+ames_dummy <- ames_dummy %>%
+  mutate_all(~ ifelse(is.na(.), mean(., na.rm = TRUE), .)) %>%
+  select(-one_of("MSZoningC (all)", "RoofMatlTar&Grv"))
+
+# Summarize the amount of remaining NA's by column
+colSums(is.na(ames_dummy))
+
+# Split the data into training and testing sets
+train <- ames_dummy[ames_dummy$train == 1, ]
+test <- ames_dummy[ames_dummy$train == 0, ]
 ```
 
 ### Model Selection
@@ -208,6 +260,36 @@ In order to use a linear regression model, we need to convert all of the categor
 talk about feature selection methods
 
 #### Forward Selection
+```{r}
+# Forward Selection
+# Use the stepAIC() function to perform forward selection
+fit2 <- stepAIC(lm(logSalePrice ~ ., data = train), direction = "forward", trace = FALSE)
+summary(fit2)
+
+# Perform stepwise selection
+set.seed(137)
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 3,
+)
+fit2 <- train(logSalePrice ~ . - SalePrice,
+  data = train,
+  method = "glmStepAIC",
+  trControl = ctrl,
+  direction = "forward",
+  penter = 0.05
+)
+
+summary(fit2)
+
+
+
+# Get selected features
+selected <- names(getVarImp(model, scale = FALSE)$importance)
+selected
+
+```
 
 #### Backward Selection
 

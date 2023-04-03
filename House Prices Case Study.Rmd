@@ -26,7 +26,11 @@ Introduction text
 
 For an interactive app to visualize this data, please see: [Shiny App](https://nicksager.shinyapps.io/CaseStudy1/)
 
-## Read the Data
+## Data Description
+
+A description of the data, where it came from, and what it contains.
+
+### Read the Data
 
 First, we will read in the beers data, and merge the breweries data so that each beer has brewery data associated with it. Then we will view a few row to make sure it looks ok. 
 ```{r}
@@ -46,7 +50,7 @@ summary(ames)
 ```
 For data cleaning purposes, we will merge test and train into one dataset, keeping in mind that the 1459 NA's in the SalePrice column are from the test set. We will also add a column to indicate whether the row is from the train or test set.
 
-## Data Exploration
+### Data Exploration
 Next, we will start exploring the data for insights into the Ames housing market as well as what variables we need to change, clean, or create.
 
 First, we will visualize where the NA values are and whether it will affect the first to parameters we are concerned about: Sale Price and Gross Living Area.
@@ -73,9 +77,12 @@ ames %>%
 There are not too many NA's in the data set, and they appear mostly to do with lack of a certain feature. For example, if a house does not have a pool, then the PoolQC column will be NA. We will need to decide how to handle these NA's, but for now we will leave them as is and continue with the analysis of Sale Price and Gross Living Area.
 
 ## Analysis 1: Sale Price and Gross Living Area
+
 Restate the problem here
 
-### Entire Dataset
+### Build and fit the model
+
+#### Entire Dataset
 ```{r}
 # Plot Sale Price vs. Gross Living Area colored by neighborhood, omitting rows where SalePrice is NA
 ames %>%
@@ -93,7 +100,11 @@ ames %>%
   ggplot(aes(x = log(GrLivArea), y = log(SalePrice), color = Neighborhood)) +
   geom_point() +
   theme_gdocs() +
-  labs(title = "log(Sale Price) vs. log(Gross Living Area) by Neighborhood", x = "log(Gross Living Area)", y = "log(Sale Price)")
+  labs(
+    title = "log(Sale Price) vs. log(Gross Living Area) by Neighborhood",
+    x = "log(Gross Living Area)",
+    y = "log(Sale Price)"
+  )
 ```
 This relationship appears to be more linear. We will create columns for the log of Sale Price and Gross Living Area and use these in our analysis.
 ```{r}
@@ -101,6 +112,9 @@ This relationship appears to be more linear. We will create columns for the log 
 ames$logSalePrice <- log(ames$SalePrice)
 ames$logGrLivArea <- log(ames$GrLivArea)
 ```
+
+#### Century 21 Area
+
 Next, we will visualize the relationship between log Sale Price and log Gross Living Area for the neighborhoods that Century21 operates in: NAmes, Edwards and BrkSide.
 ```{r}
 # Plot log(Sale Price) vs. log(Gross Living Area) colored by neighborhood, omitting rows where SalePrice is NA for only the neighborhoods of interest
@@ -156,18 +170,60 @@ fit1 %>%
   kable_styling(full_width = FALSE)
 ```
 
+### Check the Assumptions
 
-## Data Cleaning
-In order to use a linear regression model, we need to convert all of the categorical variables into dummy variables. We will also remove or impute the NA's in the data set.
+#### Residual Plots
+
+#### Influential Points
+
+### Comparing competing models
+
+This is already done, just need to move it here. Adj R2, CV press
+
+### Parameters (linear model)
+
+Estimates, interpretation, confidence
+
+### Conclusion
+
+A short summary of the analysis
+
+## RShiny App - Sale price and gross living area
+
+Either embed the app here or link to it
+
+## Analysis 2: Sale Price 
+
+Restate the problem
+
+### Data Cleaning
+In order to use a linear regression model, we need to convert all of the categorical variables into dummy variables. We will also remove or impute the NA's in the data set. Please see the appendix for details on this process.
 ```{r}
-
+# Data Cleaning
+# Change setup so this isn't shown in the Output.
 ```
 
-## Modelling
+### Model Selection
 
-### modelling
+talk about feature selection methods
 
-## Conclusion
+#### Forward Selection
+
+#### Backward Selection
+
+#### Stepwise Selection
+
+#### Custom features
+
+### Model Evaluation
+
+Adj R2, Internal CV press, Kaggle score
+
+### Checking Assumptions
+
+Residuals, Influential point (cooks d v leverage)
+
+### Conclusion
 
 Conclusion text
 
@@ -180,3 +236,8 @@ Steven Cox: sacox@mail.smu.edu
 # Write beers_breweries to a csv for later use in Shiny App
 #write_csv(beers_breweries, "Data/beers_breweries.csv")
 ```
+
+
+## Appendix 
+
+Code.

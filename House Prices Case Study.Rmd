@@ -286,13 +286,13 @@ talk about feature selection methods
 ```{r}
 # Forward Selection
 
-# Testing olsrr method.
-library(olsrr)
-fit2x <- lm(log_sale_price ~ . - sale_price, data = train)
-fit2y <- ols_step_forward_p(fit2x, penter = 0.15)$model
-summary(fit2y)
-defaultSummary(data.frame(pred = predict(fit2y), obs = train$log_sale_price))
-PRESS(fit2y)
+# # Testing olsrr method.
+# library(olsrr)
+# fit2x <- lm(log_sale_price ~ . - sale_price, data = train)
+# fit2y <- ols_step_forward_p(fit2x, penter = 0.15)$model
+# summary(fit2y)
+# defaultSummary(data.frame(pred = predict(fit2y), obs = train$log_sale_price))
+# PRESS(fit2y)
 
 # Check if the model object exists, train if it doesn't
 if (file.exists("Models/lm_forwards.rds")) {
@@ -308,9 +308,9 @@ if (file.exists("Models/lm_forwards.rds")) {
 
   set.seed(137)
   ctrl <- trainControl(
-    method = "repeatedcv",
+    method = "boot",
     number = 5,
-    repeats = 3,
+    allowParallel = TRUE
   )
   fit2 <- train(log_sale_price ~ . - sale_price,
     data = train,
@@ -329,7 +329,7 @@ if (file.exists("Models/lm_forwards.rds")) {
 
 summary(fit2)
 defaultSummary(data.frame(pred = predict(fit2), obs = train$log_sale_price))
-PRESS(fit2)
+# PRESS(fit2) #Press not working with caret models
 
 # Output the predictions for the test set to a csv file
 forward_pred <- predict(fit2, newdata = test)
@@ -376,7 +376,7 @@ if (file.exists("Models/lm_backwards.rds")) {
 
 summary(fit3)
 defaultSummary(data.frame(pred = predict(fit3), obs = train$log_sale_price))
-PRESS(fit3)
+# PRESS(fit3) # Press not working with caret models
 
 # Output the predictions for the test set to a csv file
 backward_pred <- predict(fit3, newdata = test)
@@ -423,7 +423,7 @@ if (file.exists("Models/lm_stepwise.rds")) {
 
 summary(fit4)
 defaultSummary(data.frame(pred = predict(fit4), obs = train$log_sale_price))
-PRESS(fit4)
+# PRESS(fit4) # Press not working with caret models
 
 # Output the predictions for the test set to a csv file
 stepwise_pred <- predict(fit4, newdata = test)

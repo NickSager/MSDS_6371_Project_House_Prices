@@ -172,7 +172,7 @@ century21 %>%
     y = "log(Sale Price)"
   ) +
   geom_smooth(
-    method = "lm", formula = y ~ x, se = FALSE, size = 1,
+    method = "lm", formula = y ~ x, se = FALSE, linewidth = 1,
     data = data.frame(
       logGrLivArea = century21$logGrLivArea,
       Neighborhood = century21$Neighborhood,
@@ -257,19 +257,72 @@ In order to use a linear regression model, we need to convert all of the categor
 ```{r}
 # Data Cleaning
 
+# If pool-related variables are NA, assume there is no pool and assign to 0
+ames <- ames %>%
+  mutate(
+    PoolQC = ifelse(is.na(PoolQC), "None", PoolQC),
+    PoolArea = ifelse(is.na(PoolArea), 0, PoolArea),
+  )
+# If garage-related variables are NA, assume there is no garage and assign to 0
+ames <- ames %>%
+  mutate(
+    GarageType = ifelse(is.na(GarageType), "None", GarageType),
+    #GarageYrBlt = ifelse(is.na(GarageYrBlt), 0, GarageYrBlt), #These will be changed to the mean because of large year values
+    GarageFinish = ifelse(is.na(GarageFinish), "None", GarageFinish),
+    GarageCars = ifelse(is.na(GarageCars), 0, GarageCars),
+    GarageArea = ifelse(is.na(GarageArea), 0, GarageArea),
+    GarageQual = ifelse(is.na(GarageQual), "None", GarageQual),
+    GarageCond = ifelse(is.na(GarageCond), "None", GarageCond)
+  )
+# If Bsmt-related variables are NA, assume there is no Bsmt and assign to 0
+ames <- ames %>%
+  mutate(
+    BsmtQual = ifelse(is.na(BsmtQual), "None", BsmtQual),
+    BsmtCond = ifelse(is.na(BsmtCond), "None", BsmtCond),
+    BsmtExposure = ifelse(is.na(BsmtExposure), "None", BsmtExposure),
+    BsmtFinType1 = ifelse(is.na(BsmtFinType1), "None", BsmtFinType1),
+    BsmtFinSF1 = ifelse(is.na(BsmtFinSF1), 0, BsmtFinSF1),
+    BsmtFinType2 = ifelse(is.na(BsmtFinType2), "None", BsmtFinType2),
+    BsmtFinSF2 = ifelse(is.na(BsmtFinSF2), 0, BsmtFinSF2),
+    BsmtUnfSF = ifelse(is.na(BsmtUnfSF), 0, BsmtUnfSF),
+    TotalBsmtSF = ifelse(is.na(TotalBsmtSF), 0, TotalBsmtSF)
+  )
+# If Fence-related variables are NA, assume there is no Fence and assign to 0
+ames <- ames %>%
+  mutate(
+    Fence = ifelse(is.na(Fence), "None", Fence), 
+  )
+# If Misc-related variables are NA, assume there is no Misc features and assign to 0
+ames <- ames %>%
+  mutate(
+    MiscFeature = ifelse(is.na(MiscFeature), "None", MiscFeature), 
+  )
+# If Fireplace-related variables are NA, assume there is no Fireplace and assign to 0
+ames <- ames %>%
+  mutate(
+    FireplaceQu = ifelse(is.na(FireplaceQu), "None", FireplaceQu),
+  )
+# If Alley-related variables are NA, assume there is no Alley and assign to 0
+ames <- ames %>%
+  mutate(
+    Alley = ifelse(is.na(Alley), "None", Alley),
+  )
+
+# Summarize the amount of remaining NA's by column to check what's left
+colSums(is.na(ames))
+
 # Use the dummyVars() function to convert categorical variables into dummy variables
 # Then use janitor::clean_names() to clean up the column names
 dummy_model <- dummyVars(~ ., data = ames)
 ames_dummy <- as.data.frame(predict(dummy_model, newdata = ames))
 ames_dummy <- clean_names(ames_dummy)
 
-# Handle NA values here
-
-# Fill in all na values with the mean of the column
+# Fill in all remaining na values with the mean of the column
 ames_dummy <- ames_dummy %>%
-  mutate_all(~ ifelse(is.na(.), mean(., na.rm = TRUE), .))
-
-
+  mutate(across(
+    c(-sale_price, -log_sale_price),
+    ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)
+  ))
 # Summarize the amount of remaining NA's by column
 colSums(is.na(ames_dummy))
 
@@ -330,16 +383,18 @@ if (file.exists("Models/lm_forwards.rds")) {
 summary(fit2)
 defaultSummary(data.frame(pred = predict(fit2), obs = train$log_sale_price))
 # PRESS(fit2) #Press not working with caret models
+varImp(fit2$finalModel)
 
 # Output the predictions for the test set to a csv file
-forward_pred <- predict(fit2, newdata = test)
+# fit2x <- glm(formula = formula(fit2), data = train)
+forward_pred <- predict(fit2$finalModel, test)
 
 forward_pred %>%
   data.frame() %>%
   rownames_to_column(var = "id") %>%
   mutate(SalePrice = exp(forward_pred)) %>%
   dplyr::select(id, SalePrice) %>%
-  write_csv("forward_predictions.csv")
+  write_csv("Predictions/forward_predictions.csv")
 ```
 
 #### Backward Selection
@@ -362,7 +417,7 @@ if (file.exists("Models/lm_backwards.rds")) {
   fit3 <- train(log_sale_price ~ . - sale_price,
     data = train,
     method = "glmStepAIC",
-    trControl = trainControl(method = "cv"),
+    trControl = trainControl(method = "cv", number = 5, allowParallel = TRUE),
     direction = "backward",
     penter = 0.05 # Not Working.
   )
@@ -377,16 +432,19 @@ if (file.exists("Models/lm_backwards.rds")) {
 summary(fit3)
 defaultSummary(data.frame(pred = predict(fit3), obs = train$log_sale_price))
 # PRESS(fit3) # Press not working with caret models
+varImp(fit3$finalModel)
+
 
 # Output the predictions for the test set to a csv file
-backward_pred <- predict(fit3, newdata = test)
+# fit3x <- glm(formula = formula(fit3), data = train)
+backward_pred <- predict(fit3$finalModel, newdata = test)
 
 backward_pred %>%
   data.frame() %>%
   rownames_to_column(var = "id") %>%
   mutate(SalePrice = exp(backward_pred)) %>%
   dplyr::select(id, SalePrice) %>%
-  write_csv("backward_predictions.csv")
+  write_csv("Predictions/backward_predictions.csv")
 ```
 
 #### Stepwise Selection
@@ -410,7 +468,7 @@ if (file.exists("Models/lm_stepwise.rds")) {
     data = train,
     method = "glmStepAIC",
     trControl = trainControl(method = "cv", number = 5, allowParallel = TRUE),
-    direction = "backward",
+    direction = "both",
     penter = 0.05 # Not Working.
   )
   
@@ -424,16 +482,19 @@ if (file.exists("Models/lm_stepwise.rds")) {
 summary(fit4)
 defaultSummary(data.frame(pred = predict(fit4), obs = train$log_sale_price))
 # PRESS(fit4) # Press not working with caret models
+varImp(fit4$finalModel)
+
 
 # Output the predictions for the test set to a csv file
-stepwise_pred <- predict(fit4, newdata = test)
+fit4x <- glm(formula = formula(fit4), data = train)
+stepwise_pred <- predict(fit4x, newdata = test)
 
 stepwise_pred %>%
   data.frame() %>%
   rownames_to_column(var = "id") %>%
   mutate(SalePrice = exp(stepwise_pred)) %>%
   dplyr::select(id, SalePrice) %>%
-  write_csv("stepwise_predictions.csv")
+  write_csv("Predictions/stepwise_predictions.csv")
 ```
 
 #### Custom features

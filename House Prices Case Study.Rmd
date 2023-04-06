@@ -484,10 +484,9 @@ defaultSummary(data.frame(pred = predict(fit4), obs = train$log_sale_price))
 # PRESS(fit4) # Press not working with caret models
 varImp(fit4$finalModel)
 
-
 # Output the predictions for the test set to a csv file
-fit4x <- glm(formula = formula(fit4), data = train)
-stepwise_pred <- predict(fit4x, newdata = test)
+# fit4x <- glm(formula = formula(fit4), data = train)
+stepwise_pred <- predict(fit4$finalModel, newdata = test)
 
 stepwise_pred %>%
   data.frame() %>%

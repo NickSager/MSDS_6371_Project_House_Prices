@@ -382,8 +382,10 @@ if (file.exists("Models/lm_forwards.rds")) {
 
 summary(fit2)
 defaultSummary(data.frame(pred = predict(fit2), obs = train$log_sale_price))
-# PRESS(fit2) #Press not working with caret models
-varImp(fit2$finalModel)
+PRESS(fit2$finalModel) #Press not working with caret models
+varImp(fit2$finalModel)%>%
+  filter(Overall > 4) %>%
+  arrange(desc(Overall))
 
 # Output the predictions for the test set to a csv file
 # fit2x <- glm(formula = formula(fit2), data = train)
@@ -431,8 +433,10 @@ if (file.exists("Models/lm_backwards.rds")) {
 
 summary(fit3)
 defaultSummary(data.frame(pred = predict(fit3), obs = train$log_sale_price))
-# PRESS(fit3) # Press not working with caret models
-varImp(fit3$finalModel)
+PRESS(fit3$finalModel) # Press not working with caret models
+varImp(fit3$finalModel)%>%
+  filter(Overall > 4) %>%
+  arrange(desc(Overall))
 
 
 # Output the predictions for the test set to a csv file
@@ -481,8 +485,10 @@ if (file.exists("Models/lm_stepwise.rds")) {
 
 summary(fit4)
 defaultSummary(data.frame(pred = predict(fit4), obs = train$log_sale_price))
-# PRESS(fit4) # Press not working with caret models
-varImp(fit4$finalModel)
+PRESS(fit4$finalModel) # Press not working with caret models
+varImp(fit4$finalModel) %>%
+  filter(Overall > 4) %>%
+  arrange(desc(Overall))
 
 # Output the predictions for the test set to a csv file
 # fit4x <- glm(formula = formula(fit4), data = train)
@@ -497,6 +503,37 @@ stepwise_pred %>%
 ```
 
 #### Custom features
+For custom features, we wil use the top ten parameters ranked by importance from the stepwise model. We expect that this model will not perform as well, but each parameter will be more explainable, and fitting should require much less compute. The question we hope to answer is whether the increase in performance is worth the cost for one of the brute-force models, and whether ten parameters is too few to capture the complexity of the data.
+```{r}
+# Custom Feature Selection
+top10 <- varImp(fit4$finalModel) %>%
+  filter(Overall > 4) %>%
+  arrange(desc(Overall)) %>%
+  head(10) %>%
+  rownames()
+
+form <- as.formula(paste("log_sale_price ~", paste(top10, collapse = "+")))
+fit5 <- lm(form, data = train)
+
+
+summary(fit5)
+defaultSummary(data.frame(pred = predict(fit5), obs = train$log_sale_price))
+PRESS(fit5) # Press not working with caret models
+varImp(fit5$finalModel) %>%
+  filter(Overall > 4) %>%
+  arrange(desc(Overall))
+
+# Output the predictions for the test set to a csv file
+# fit4x <- glm(formula = formula(fit4), data = train)
+custom_pred <- predict(fit5, newdata = test)
+
+custom_pred %>%
+  data.frame() %>%
+  rownames_to_column(var = "id") %>%
+  mutate(SalePrice = exp(custom_pred)) %>%
+  dplyr::select(id, SalePrice) %>%
+  write_csv("Predictions/custom_predictions.csv")
+```
 
 ### Model Evaluation
 

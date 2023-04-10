@@ -531,9 +531,9 @@ fit5 <- lm(form, data = train)
 summary(fit5)
 defaultSummary(data.frame(pred = predict(fit5), obs = train$log_sale_price))
 PRESS(fit5) # Press not working with caret models
-# varImp(fit5$finalModel) %>%
-  # filter(Overall > 4) %>%
-  # arrange(desc(Overall))
+varImp(fit5) %>%
+  filter(Overall > 4) %>%
+  arrange(desc(Overall))
 
 # Output the predictions for the test set to a csv file
 # fit4x <- glm(formula = formula(fit4), data = train)

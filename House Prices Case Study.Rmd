@@ -127,7 +127,7 @@ PRESS <- function(linear.model) {
 # https://gist.github.com/tomhopper/8c204d978c4a0cbcb8c0
 ```
 ^Just some code for CV PRESS and log transformations.
-Jae: What do you think about using AIC rather than PRESS? The models are optimised using AIC.
+Jae: What do you think about using AIC rather than PRESS? The models are optimized using AIC.
 
 #### Century 21 Area
 
@@ -546,7 +546,7 @@ custom_pred %>%
   dplyr::select(id, SalePrice) %>%
   write_csv("Predictions/custom_predictions.csv")
 ```
-AIC: Not Sure, RMSE: .16, R2: 0.84 (worse but more parsimonious)
+AIC: -1190, RMSE: .16, R2: 0.84 (worse but more parsimonious)
 
 ### Model Evaluation
 
@@ -554,7 +554,26 @@ Adj R2, Internal CV press, Kaggle score
 
 ### Checking Assumptions
 
-Residuals, Influential point (cooks d v leverage)
+Checking the assumptions of the forward model. The other models should be similar.
+
+#### Residual Plots
+```{r}
+# Plot the studentized residuals using base R
+plot(fit2$finalModel$fitted.values, fit2$finalModel$residuals, type = "p")
+plot(fit2$finalModel$residuals)
+hist(fit2$finalModel$residuals, freq = FALSE)
+curve(dnorm(x, mean = mean(fit2$finalModel$residuals), sd = sd(fit2$finalModel$residuals)), add = TRUE, col = "blue")
+```
+
+ There is no evidence of non-linearity, heteroscedasticity, or non-normality.
+
+#### Influential Points
+```{r}
+# Plot the residuals vs. the fitted values
+fit2$finalModel %>%
+  plot()
+```
+There are several points with a cook's d approximately 1 which could be investigated. However, the results are consistent with the assumptions of the linear model.
 
 ### Conclusion
 
